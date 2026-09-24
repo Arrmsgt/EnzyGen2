@@ -309,8 +309,13 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False):
             torch.distributed.barrier()
         local_path = PathManager.get_local_path(path)
 
-    with open(local_path, "rb") as f:
-        state = torch.load(f, map_location=torch.device("cpu"), weights_only=False)
+    import gzip
+    with open(local_path, "rb") as _f:
+        _magic = _f.read(2)
+        _f.seek(0)
+        # EnzyGen2 发布的 checkpoint 是 gzip 压缩的，torch.load 需传入 gzip 文件对象
+        _fh = gzip.GzipFile(fileobj=_f, mode="rb") if _magic == bytes((0x1f, 0x8b)) else _f
+        state = torch.load(_fh, map_location=torch.device("cpu"), weights_only=False)
 
     if "args" in state and state["args"] is not None and arg_overrides is not None:
         args = state["args"]
@@ -323,12 +328,19 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False):
         # omegaconf version that supports object flags, or when we migrate all existing models
         from omegaconf import _utils
 
-        old_primitive = _utils.is_primitive_type
-        _utils.is_primitive_type = lambda _: True
+        _attr = (
+            "is_primitive_type"
+            if hasattr(_utils, "is_primitive_type")
+            else "is_primitive_type_annotation"
+        )
+        old_primitive = getattr(_utils, _attr, None)
+        if old_primitive is not None:
+            setattr(_utils, _attr, lambda _: True)
 
-        state["cfg"] = OmegaConf.create(state["cfg"])
+        state["cfg"] = OmegaConf.create(state["cfg"], flags={"allow_objects": True})
 
-        _utils.is_primitive_type = old_primitive
+        if old_primitive is not None:
+            setattr(_utils, _attr, old_primitive)
         OmegaConf.set_struct(state["cfg"], True)
 
         if arg_overrides is not None:

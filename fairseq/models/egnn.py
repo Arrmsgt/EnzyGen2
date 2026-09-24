@@ -2,7 +2,15 @@ from torch import nn
 import torch
 
 
-device = torch.device("cuda")
+try:
+    if torch.sdaa.is_available():
+        device = torch.device("sdaa")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+except (AttributeError, NameError):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def unsorted_segment_sum(data, segment_ids, num_segments):
@@ -118,6 +126,8 @@ class E_GCL(nn.Module):
 
     def coord2radial(self, edge_index, coord):
         row, col = edge_index
+        row = row.to(coord.device)
+        col = col.to(coord.device)
         coord_diff = coord[row] - coord[col]
         radial = torch.sum(coord_diff**2, 1).unsqueeze(1).to(device)  # [KNN]
 
@@ -242,6 +252,8 @@ class E_GCL_RM_Node(nn.Module):
 
     def coord2radial(self, edge_index, coord):
         row, col = edge_index
+        row = row.to(coord.device)
+        col = col.to(coord.device)
         coord_diff = coord[row] - coord[col]
         radial = torch.sum(coord_diff**2, 1).unsqueeze(1).to(device)  # [KNN]
 
@@ -330,6 +342,8 @@ class E_GCL_RM_Edge(nn.Module):
 
     def coord2radial(self, edge_index, coord):
         row, col = edge_index
+        row = row.to(coord.device)
+        col = col.to(coord.device)
         coord_diff = coord[row] - coord[col]
         radial = torch.sum(coord_diff**2, 1).unsqueeze(1).to(device)  # [KNN]
 
@@ -408,6 +422,8 @@ class E_GCL_RM_All(nn.Module):
 
     def coord2radial(self, edge_index, coord):
         row, col = edge_index
+        row = row.to(coord.device)
+        col = col.to(coord.device)
         coord_diff = coord[row] - coord[col]
         radial = torch.sum(coord_diff**2, 1).unsqueeze(1).to(device)  # [KNN]
 

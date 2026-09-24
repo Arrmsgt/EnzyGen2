@@ -1,0 +1,11 @@
+# 编译产物
+build/
+*.so
+__pycache__/
+*.pyc
+
+# 模型权重（大文件）
+models/
+
+# macOS
+.DS_Store

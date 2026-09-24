@@ -20,7 +20,15 @@ from fairseq.models.esm_modules import Alphabet
 from fairseq.models.egnn import EGNN, SubstrateEGNN
 
 
-device = torch.device("cuda")
+try:
+    if torch.sdaa.is_available():
+        device = torch.device("sdaa")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+except (AttributeError, NameError):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DEFAULT_MAX_SOURCE_POSITIONS = 1024
 
 
@@ -276,7 +284,7 @@ class GeometricProteinNCBIModel(TransformerModel):
                 # x: B * L * dim; edges: B * L * 30; coords: B * L * 3
                 coords = coords.view(batch_size, -1, coords.size()[-1])  # [batch * length, 3]
                 edges = get_edges_batch(n_nodes, batch_size, coords.detach().cpu(), k)
-                coords = coords.reshape(-1, coords.size()[-1])  # [batch * length, 3]
+                coords = coords.reshape(-1, coords.size()[-1]).to(x.device)  # [batch * length, 3]  SDAA device 对齐
                 # edges = get_edges_batch(n_nodes, batch_size)
                 x, coords, _ = self.decoder._modules["gcl_%d" % int(decoder_layer_idx)](x, edges, coords,
                                                                                         edge_attr=None,
@@ -384,7 +392,7 @@ class GeometricProteinNCBISubstrateModel(GeometricProteinNCBIModel):
                 # x: B * L * dim; edges: B * L * 30; coords: B * L * 3
                 coords = coords.view(batch_size, -1, coords.size()[-1])  # [batch * length, 3]
                 edges = get_edges_batch(n_nodes, batch_size, coords.detach().cpu(), k)
-                coords = coords.reshape(-1, coords.size()[-1])  # [batch * length, 3]
+                coords = coords.reshape(-1, coords.size()[-1]).to(x.device)  # [batch * length, 3]  SDAA device 对齐
                 # edges = get_edges_batch(n_nodes, batch_size)
                 x, coords, _ = self.decoder._modules["gcl_%d" % int(decoder_layer_idx)](x, edges, coords,
                                                                                         edge_attr=None,

@@ -7,6 +7,7 @@
 import logging
 from hydra.core.config_store import ConfigStore
 from fairseq.dataclass.configs import FairseqConfig
+from dataclasses import _MISSING_TYPE
 from omegaconf import DictConfig, OmegaConf
 
 
@@ -18,8 +19,14 @@ def hydra_init(cfg_name="config") -> None:
     cs = ConfigStore.instance()
     cs.store(name=f"{cfg_name}", node=FairseqConfig)
 
-    for k in FairseqConfig.__dataclass_fields__:
-        v = FairseqConfig.__dataclass_fields__[k].default
+    for k, f in FairseqConfig.__dataclass_fields__.items():
+        v = f.default
+        # py3.11+ mutable default 修复后，字段用 field(default_factory=...)，default 是 dataclasses.MISSING
+        if isinstance(v, _MISSING_TYPE):
+            v = f.default_factory()
+        elif v is None or (isinstance(v, str) and v == "???"):
+            # Any 类型字段（model/task/criterion/...）无需注册默认配置
+            continue
         try:
             cs.store(name=k, node=v)
         except BaseException:

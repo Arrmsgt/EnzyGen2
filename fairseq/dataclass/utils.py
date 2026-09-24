@@ -364,13 +364,21 @@ def override_module_args(args: Namespace) -> Tuple[List[str], List[str]]:
 
 class omegaconf_no_object_check:
     def __init__(self):
-        self.old_is_primitive = _utils.is_primitive_type
+        # omegaconf 2.1.x 用 is_primitive_type；2.2+ 改为 is_primitive_type_annotation
+        self._attr = (
+            "is_primitive_type"
+            if hasattr(_utils, "is_primitive_type")
+            else "is_primitive_type_annotation"
+        )
+        self._old = getattr(_utils, self._attr, None)
 
     def __enter__(self):
-        _utils.is_primitive_type = lambda _: True
+        if self._old is not None:
+            setattr(_utils, self._attr, lambda _: True)
 
     def __exit__(self, type, value, traceback):
-        _utils.is_primitive_type = self.old_is_primitive
+        if self._old is not None:
+            setattr(_utils, self._attr, self._old)
 
 
 def convert_namespace_to_omegaconf(args: Namespace) -> DictConfig:
@@ -395,7 +403,8 @@ def convert_namespace_to_omegaconf(args: Namespace) -> DictConfig:
             composed_cfg[k] = None
 
     cfg = OmegaConf.create(
-        OmegaConf.to_container(composed_cfg, resolve=True, enum_to_str=True)
+        OmegaConf.to_container(composed_cfg, resolve=True, enum_to_str=True),
+        flags={"allow_objects": True},
     )
 
     # hack to be able to set Namespace in dict config. this should be removed when we update to newer

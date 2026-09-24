@@ -38,6 +38,7 @@ def main(cfg: DictConfig, override_args=None):
 
     use_fp16 = cfg.common.fp16
     use_cuda = torch.cuda.is_available() and not cfg.common.cpu
+    use_sdaa = hasattr(torch, "sdaa") and torch.sdaa.is_available() and not cfg.common.cpu
 
     if use_cuda:
         torch.cuda.set_device(cfg.distributed_training.device_id)
@@ -73,6 +74,8 @@ def main(cfg: DictConfig, override_args=None):
             model.half()
         if use_cuda:
             model.cuda()
+        elif use_sdaa:
+            model.to("sdaa")
 
     # Print args
     logger.info(saved_cfg)
@@ -124,7 +127,10 @@ def main(cfg: DictConfig, override_args=None):
         fw_ll = open(os.path.join(cfg.common_eval.results_path, "log_likelihood.txt"), "w")
 
         for i, sample in enumerate(progress):
-            sample = utils.move_to_cuda(sample) if use_cuda else sample
+            if use_cuda:
+                sample = utils.move_to_cuda(sample)
+            elif use_sdaa:
+                sample = utils.move_to_cuda(sample, device=torch.device("sdaa"))
             _loss, _sample_size, log_output, _strings, _srcs, pdbs, coords, target_coors, _rmsd, _probs = task.valid_step(sample, model, criterion, topp_probability)
 
             strings.extend(_strings)

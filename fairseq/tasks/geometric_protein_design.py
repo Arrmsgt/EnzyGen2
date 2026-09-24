@@ -22,7 +22,15 @@ from fairseq.tasks import FairseqTask, register_task
 from fairseq.models.esm_modules import Alphabet
 
 
-device = torch.device("cuda")
+try:
+    if torch.sdaa.is_available():
+        device = torch.device("sdaa")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+except (AttributeError, NameError):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 logger = logging.getLogger(__name__)

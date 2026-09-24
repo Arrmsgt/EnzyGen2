@@ -56,7 +56,7 @@ class Trainer(object):
         self.tpu = cfg.common.tpu
         self.cuda = torch.cuda.is_available() and not cfg.common.cpu and not self.tpu
         if self.cuda:
-            self.device = torch.device("cuda")
+            self.device = torch.device("sdaa" if torch.sdaa.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
         elif self.tpu:
             self.device = utils.get_tpu_device()
         else:

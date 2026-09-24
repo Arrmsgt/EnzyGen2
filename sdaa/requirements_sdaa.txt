@@ -1,0 +1,27 @@
+﻿# EnzyGen2 SDAA 推理依赖（版本取自龙芯实测）
+# torch 为 SDAA 定制版，需 source /opt/tecoai/setvars.sh
+
+# 核心框架
+torch==2.12.0              # SDAA 定制（含 torch_sdaa 3.3.0b0）
+numpy==1.26.4
+
+# fairseq 运行时依赖
+hydra-core==1.3.6
+omegaconf==2.3.1
+regex
+tqdm
+bitarray
+sacremoses
+cffi
+
+# 编译 C++/Cython 扩展
+cython
+setuptools
+wheel
+
+# 数据处理
+scikit-learn
+biotite                   # 龙芯为源码编译版 0.1.dev5354
+
+# fairseq 本体不经 pip 安装（vendored 在仓库），需 python setup.py build_ext --inplace
+# CUDA 扩展（libnat_cuda 等）在无 CUDA_HOME 时自动跳过
