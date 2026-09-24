@@ -9,3 +9,4 @@ models/
 
 # macOS
 .DS_Store
+data/
